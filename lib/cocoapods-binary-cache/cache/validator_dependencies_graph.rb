@@ -34,8 +34,14 @@ module PodPrebuild
       end
       
       clients = dependencies_graph.get_clients(missed_root_pods)
-      unless PodPrebuild.config.dev_pods_enabled?
-        clients = clients.reject { |client| @pod_lockfile.dev_pods.keys.include?(client) }
+      
+      # 始终排除Local Pods（dev pods），原因如下：
+      # 1. Local Pods通常因为源码变动而Missed，这才是更重要的Reason。
+      # 2. DependenciesGraph是最后一个validator，如果不排除，它会覆盖掉Local Pods本来的Reason（如Incompatible source）。
+      # 3. 之前的排除逻辑可能有漏洞（直接匹配完整名称而不是Root Name），导致Subspec没被排除。
+      clients = clients.reject do |client| 
+        root_name = client.split("/")[0]
+        @pod_lockfile.dev_pod_names.include?(root_name)
       end
 
       missed = clients.map { |client| [client, "Dependencies were missed"] }.to_h
