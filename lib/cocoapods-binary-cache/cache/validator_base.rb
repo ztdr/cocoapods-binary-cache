@@ -39,6 +39,10 @@ module PodPrebuild
       check_pod = lambda do |name|
         root_name = name.split("/")[0]
         version = pods[name]
+        # 如果 pod 不在 Podfile.lock 中，跳过验证
+        # 这可以防止检查当前 Podfile.lock 中不存在的 pods
+        return true if version.nil?
+        
         prebuilt_version = prebuilt_pods[name]
         result = false
         if prebuilt_version.nil?
@@ -60,11 +64,21 @@ module PodPrebuild
       end
 
       subspec_pods.each do |parent, children|
-        missed_children = children.reject { |child| check_pod.call(child) }
+        # 只检查在 pods hash 中存在的 children（来自 Podfile.lock）
+        # 这对 Local Pods 很重要：如果某个 subspec 不在 Podfile.lock 中，
+        # 即使它出现在 subspec_pods 分组中，也不应该被检查
+        existing_children = children.select { |child| pods.key?(child) }
+        next if existing_children.empty?
+        
+        missed_children = existing_children.reject { |child| check_pod.call(child) }
         if missed_children.empty?
-          hit << parent
+          # 只有当父 pod 在 Podfile.lock 中存在时，才标记为命中
+          # 对于 Local Pods，父 pod 可能不在 non_dev_pods 中
+          hit << parent if pods.key?(parent)
         else
-          missed[parent] = "Subspec pods were missed: #{missed_children}"
+          # 只有当父 pod 在 Podfile.lock 中存在时，才标记为未命中
+          # 这可以防止 Local Pods 的误报
+          missed[parent] = "Subspec pods were missed: #{missed_children}" if pods.key?(parent)
         end
       end
 
