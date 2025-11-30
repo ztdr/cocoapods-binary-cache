@@ -56,6 +56,10 @@ Note:
 - Default: `false`.
 - Enable prebuilt frameworks to be used with devices.
 
+### `simulator_build_enabled`
+- Default: `true`.
+- Enable prebuilt frameworks to be used with simulators. Set to `false` to disable iphonesimulator build.
+
 ### `xcframework`
 - Default: `false`.
 - Enable `xcframework` support. This is useful when prebuilding for multi architectures (for simulators & devices).\

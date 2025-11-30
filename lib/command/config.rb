@@ -105,6 +105,10 @@ module PodPrebuild
       @dsl_config[:device_build_enabled]
     end
 
+    def simulator_build_enabled?
+      @dsl_config[:simulator_build_enabled].nil? ? true : @dsl_config[:simulator_build_enabled]
+    end
+
     def xcframework?
       @dsl_config[:xcframework]
     end
@@ -179,6 +183,7 @@ module PodPrebuild
         :dev_pods_enabled,
         :bitcode_enabled,
         :device_build_enabled,
+        :simulator_build_enabled,
         :xcframework,
         :disable_dsym,
         :dont_remove_source_code,

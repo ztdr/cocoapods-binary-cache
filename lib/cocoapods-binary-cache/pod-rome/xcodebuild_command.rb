@@ -49,8 +49,8 @@ module PodPrebuild
 
     def build_types
       @build_types ||= begin
-        # TODO (thuyen): Add DSL options `build_for_types` to specify build types
-        types = [:simulator]
+        types = []
+        types << :simulator if simulator_build_enabled?
         types << :device if device_build_enabled?
         types
       end
@@ -240,6 +240,10 @@ module PodPrebuild
 
     def device_build_enabled?
       @options[:device_build_enabled]
+    end
+
+    def simulator_build_enabled?
+      @options[:simulator_build_enabled].nil? ? true : @options[:simulator_build_enabled]
     end
 
     def device
