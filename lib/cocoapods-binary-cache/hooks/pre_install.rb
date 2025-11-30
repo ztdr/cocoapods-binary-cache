@@ -1,3 +1,5 @@
+require 'set'
+
 module PodPrebuild
   class PreInstallHook
     include ObjectSpace
@@ -73,7 +75,7 @@ module PodPrebuild
       prebuilt_lockfile = Pod::Lockfile.from_file(prebuild_sandbox.root + "Manifest.lock")
       @cache_validation = PodPrebuild::CacheValidator.new(
         podfile: podfile,
-        pod_lockfile: installer_context.lockfile,
+        pod_lockfile: validated_lockfile,
         prebuilt_lockfile: prebuilt_lockfile,
         validate_prebuilt_settings: PodPrebuild.config.validate_prebuilt_settings,
         generated_framework_path: prebuild_sandbox.generate_framework_path,
@@ -85,6 +87,31 @@ module PodPrebuild
       @cache_validation.update_to(path_to_save_cache_validation) unless path_to_save_cache_validation.nil?
       cache_validation.print_summary
       PodPrebuild.state.update(:cache_validation => cache_validation)
+    end
+
+    def validated_lockfile
+      lockfile = installer_context.lockfile
+      return nil unless lockfile
+
+      if @original_installer && @original_installer.analysis_result
+        specs = @original_installer.analysis_result.specifications
+        return lockfile if specs.nil?
+
+        spec_names = specs.map(&:name).to_set
+        lockfile_hash = Marshal.load(Marshal.dump(lockfile.to_hash))
+
+        if lockfile_hash["PODS"]
+          lockfile_hash["PODS"].select! do |pod|
+            name_with_version = pod.is_a?(Hash) ? pod.keys.first : pod
+            name = name_with_version.split(" ").first
+            spec_names.include?(name)
+          end
+        end
+
+        return Pod::Lockfile.new(lockfile_hash)
+      end
+
+      lockfile
     end
 
     def prebuild!
